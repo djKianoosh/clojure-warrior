@@ -12,11 +12,11 @@
     []                     ; level 2
   ])
 
-(defn get-board []
+(defn- get-board []
   (nth boards (dec (:level @player-state))))
 
 ; actions for the level
-(defn next-position [player-position player-direction]
+(defn- next-position [player-position player-direction]
   (let [x (first player-position) y (second player-position)]
     (cond
       (= player-direction :east)
@@ -29,7 +29,7 @@
         [x,(dec y)])))
 
 ; return 'X' if the coords are outside the board...
-(defn get-board-position [x y]
+(defn- get-board-position [x y]
   (let [board (get-board)]
     (if (>= y (count board))
       "X"
@@ -38,7 +38,7 @@
           "X"
           (nth row x))))))
 
-(defn move-player-to-start []
+(defn- move-player-to-start []
   (let [board (get-board) height (count board) width (count (first board))]
     (doall
       (for [y (range (dec height) -1 -1)]
@@ -49,18 +49,18 @@
                 (dosync (alter player-state assoc :position [x,y]))
                 (println "moved player to" [x,y] "for start of level" (:level @player-state))))))))))
 
-(defn board-at-current-player-position []
+(defn- board-at-current-player-position []
   (let [player-position (:position @player-state) x (first player-position) y (second player-position)]
     (get-board-position x y)))
 
-(defn did-you-win? []
+(defn- did-you-win? []
   ; if current player position is on a ">"
   (= ">" (board-at-current-player-position)))
 
 (defn- make-player-face [dir]
   (dosync (alter player-state assoc :direction dir)))
 
-(defn action-turn-left []
+(defn- action-turn-left []
   (let [player-direction (:direction @player-state)]
     (cond
       (= :north player-direction)
@@ -72,7 +72,7 @@
       (= :west player-direction)
         (make-player-face :south))))
 
-(defn action-turn-right []
+(defn- action-turn-right []
   (let [player-direction (:direction @player-state)]
     (cond
       (= :north player-direction)
@@ -84,7 +84,7 @@
       (= :west player-direction)
         (make-player-face :north))))
 
-(defn action-walk []
+(defn- action-walk []
   (let [player-position (:position @player-state) player-direction (:direction @player-state)]
     (let [ next-position (next-position player-position player-direction) x (first next-position) y (second next-position) next-tile (get-board-position x y)]
       (do
@@ -98,21 +98,26 @@
 (def turn-right (memoize action-turn-right))
 (def walk (memoize action-walk))
 
-(defn enable-actions []
+; we need to limit to one action, but this limits to one call to each action per round for now
+; of course, any decent clojure programmer can work around this, but it is the spirit that counts
+; or some crap like that....
+(defn- enable-actions []
   (def turn-left (memoize action-turn-left))
   (def turn-right (memoize action-turn-right))
   (def walk (memoize action-walk)))
 
-(def what-i-can-do [[walk,turn-left,turn-right]])
+(def what-i-can-do [[walk,turn-left,turn-right] ; level 1 actions
+                    ])
 
 (defn what-can-i-do? []
   (nth what-i-can-do (dec (:level @player-state))))
 
-(defn advance-player []
+; move player to the next round
+(defn- advance-player []
   (dosync
     (alter player-state assoc :level (inc (:level @player-state)) :position [0,0] :direction :east)))
 
-(defn print-board []
+(defn- print-board []
   (let [board (get-board) height (count board) width (count (first board))]
     (println)
     (println "***** start-of-board *****")
@@ -124,11 +129,11 @@
               (for [x (range width) ]
                 (let [board-position (.trim (get-board-position x y))]
                   (cond
-                    (= (:position @player-state) [x,y])
+                    (= (:position @player-state) [x,y]) ; this is where the player is right now
                       (print "' @ '")
-                    (= "@" board-position)
+                    (= "@" board-position) ; this is where the player started, but might not be any longer
                       (print "' _ '")
-                    (= "" board-position)
+                    (= "" board-position) ; this is an empty spot
                       (print "' _ '")
                     :else
                       (print "'"board-position"'"))))))))
