@@ -1,12 +1,14 @@
 (ns clojure-warrior.core)
 
-(def player-state (ref {:direction :east, :position [0,0], :level 1 } ))
+(def player-state (ref {:direction :east, :position [0,2], :level 1 } ))
 
-(def directions #{:north :south :east :west}) ; not necessary
+(def directions #{:north :south :east :west}) ; not necessary, just for documentation
 
 ; info about the board
 (def boards [
-    [["@", " ", " ", ">"]] ; level 1
+    [["@", " ", " ", ">"]
+     [" ", " ", " ", " "]
+     [" ", " ", " ", " "]] ; level 1
     []                     ; level 2
   ])
 
@@ -29,7 +31,7 @@
 
 (defn get-board-position [x y]
   (let [board (get-board)]
-    (nth (nth board y) x)))
+    (nth (nth board (- (dec (count board)) y)) x)))
 
 (defn current-player-position []
   (let [player-position (:position @player-state) x (first player-position) y (second player-position)]
@@ -54,9 +56,33 @@
 (defn what-can-i-do? []
   (nth what-i-can-do (dec (:level @player-state))))
 
+(defn print-board []
+  (let [board (get-board) height (count board) width (count (first board))]
+      (doall
+        (for [y (range (dec height) -1 -1)]
+          (do
+            (println)
+            (doall
+              (for [x (range width) ]
+                (let [board-position (.trim (get-board-position x y))]
+                  (cond
+                    (= (:position @player-state) [x,y])
+                      (print "' @ '")
+                    (= "@" board-position)
+                      (print "' _ '")
+                    (= "" board-position)
+                      (print "' _ '")
+                    :else
+                      (print "'"board-position"'"))))))))
+    (println)
+    (println)))
+
 (defn run-game [function]
   (loop []
+    (print-board)
     (function)
     (if (did-you-win?)
-      (println "you rock the party")
+      (do
+        (print-board)
+        (println "you rock the party")) ; todo move player to next level
       (recur))))

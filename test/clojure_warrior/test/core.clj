@@ -5,4 +5,6 @@
 (defn play []
   (walk))
 
+;(print-board)
+
 (run-game play)
