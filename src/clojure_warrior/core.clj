@@ -2,7 +2,7 @@
 
 (def player-state (ref {:direction :east, :position [0,0], :level 1 } ))
 
-(def directions #{:north :east :south :west})
+(def directions #{:north :east :south :west}) ; not used, just in case you ever get confused?
 
 ; info about the board
 (def boards [
@@ -11,7 +11,6 @@
      [" ", " ", " ", " "]] ; level 1
     []                     ; level 2
   ])
-
 
 (defn get-board []
   (nth boards (dec (:level @player-state))))
@@ -29,17 +28,34 @@
       (= player-direction :south)
         [x,(dec y)])))
 
+; return 'X' if the coords are outside the board...
 (defn get-board-position [x y]
   (let [board (get-board)]
-    (nth (nth board (- (dec (count board)) y)) x)))
+    (if (>= y (count board))
+      "X"
+      (let [row (nth board (- (dec (count board)) y))]
+        (if (>= x (count row))
+          "X"
+          (nth row x))))))
 
-(defn current-player-board-position []
+(defn move-player-to-start []
+  (let [board (get-board) height (count board) width (count (first board))]
+    (doall
+      (for [y (range (dec height) -1 -1)]
+        (doall
+          (for [x (range width) ]
+            (if (= "@" (get-board-position x y))
+              (do
+                (dosync (alter player-state assoc :position [x,y]))
+                (println "moved player to" [x,y] "for start of level" (:level @player-state))))))))))
+
+(defn board-at-current-player-position []
   (let [player-position (:position @player-state) x (first player-position) y (second player-position)]
     (get-board-position x y)))
 
 (defn did-you-win? []
   ; if current player position is on a ">"
-  (= ">" (current-player-board-position)))
+  (= ">" (board-at-current-player-position)))
 
 (defn- make-player-face [dir]
   (dosync (alter player-state assoc :direction dir)))
@@ -82,6 +98,11 @@
 (def turn-right (memoize action-turn-right))
 (def walk (memoize action-walk))
 
+(defn enable-actions []
+  (def turn-left (memoize action-turn-left))
+  (def turn-right (memoize action-turn-right))
+  (def walk (memoize action-walk)))
+
 (def what-i-can-do [[walk,turn-left,turn-right]])
 
 (defn what-can-i-do? []
@@ -115,13 +136,16 @@
     (println "***** end-of-board *****")))
 
 (defn run-game [function]
-  (loop []
-    (print-board)
-    (function)
-    (if (did-you-win?)
-      (do
-        (print-board)
-        (println "You win this round!")
-        (advance-player)
-        (println @player-state)) ; todo move player to next level
-      (recur))))
+  (do
+    (move-player-to-start)
+    (loop []
+      (enable-actions)
+      (print-board)
+      (function)
+      (if (did-you-win?)
+        (do
+          (print-board)
+          (println "You win this round!")
+          (advance-player)
+          (println @player-state)) ; todo move player to next level
+        (recur)))))
