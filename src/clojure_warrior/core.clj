@@ -44,7 +44,7 @@
 (defn- make-player-face [dir]
   (dosync (alter player-state assoc :direction dir)))
 
-(defn turn-left []
+(defn action-turn-left []
   (let [player-direction (:direction @player-state)]
     (cond
       (= :north player-direction)
@@ -56,7 +56,7 @@
       (= :west player-direction)
         (make-player-face :south))))
 
-(defn turn-right []
+(defn action-turn-right []
   (let [player-direction (:direction @player-state)]
     (cond
       (= :north player-direction)
@@ -68,7 +68,7 @@
       (= :west player-direction)
         (make-player-face :north))))
 
-(defn walk []
+(defn action-walk []
   (let [player-position (:position @player-state) player-direction (:direction @player-state)]
     (let [ next-position (next-position player-position player-direction) x (first next-position) y (second next-position) next-tile (get-board-position x y)]
       (do
@@ -77,6 +77,10 @@
           (dosync
             (alter player-state assoc :position next-position))
           (println "You hit a wall dummy!"))))) )
+
+(def turn-left (memoize action-turn-left))
+(def turn-right (memoize action-turn-right))
+(def walk (memoize action-walk))
 
 (def what-i-can-do [[walk,turn-left,turn-right]])
 
