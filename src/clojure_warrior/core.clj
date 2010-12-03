@@ -12,6 +12,8 @@
     []                     ; level 2
   ])
 
+(declare print-board)
+
 (defn- get-board []
   (nth boards (dec (:level @player-state))))
 
@@ -38,7 +40,7 @@
           "X"
           (nth row x))))))
 
-(defn- move-player-to-start []
+(defn start []
   (let [board (get-board) height (count board) width (count (first board))]
     (doall
       (for [y (range (dec height) -1 -1)]
@@ -47,7 +49,8 @@
             (if (= "@" (get-board-position x y))
               (do
                 (dosync (alter player-state assoc :position [x,y]))
-                (println "moved player to" [x,y] "for start of level" (:level @player-state))))))))))
+                (println "moved player to" [x,y] "for start of level" (:level @player-state))))))))
+    (print-board)))
 
 (defn- board-at-current-player-position []
   (let [player-position (:position @player-state) x (first player-position) y (second player-position)]
@@ -106,6 +109,7 @@
   (def turn-right (memoize action-turn-right))
   (def walk (memoize action-walk)))
 
+; FIND A WAY TO PRINT THIS GRACEFULLY
 (def what-i-can-do [[walk,turn-left,turn-right] ; level 1 actions
                     ])
 
@@ -140,9 +144,24 @@
     (println)
     (println "***** end-of-board *****")))
 
+(defn prompt-for-function []
+  (println "give me a function!")
+  (eval (list (read))))
+
+(defn take-a-turn []
+    (enable-actions)
+    (prompt-for-function)
+    (print-board)
+    (if (did-you-win?)
+      (do
+        (print-board)
+        (println "You win this round!")
+        (advance-player)
+        (println @player-state))))
+
 (defn run-game [function]
   (do
-    (move-player-to-start)
+    (start)
     (loop []
       (enable-actions)
       (print-board)
